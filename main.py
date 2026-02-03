@@ -1,13 +1,14 @@
 import glob
 import os
 import shutil
+import time
 from multiprocessing import Manager, Pool
 
 import pypdf
 
 # Gathering PDF folder paths and defining constants
 FOLDER_PATH = glob.glob("./VOL00010/IMAGES/*/")  # Update your folder path here
-PROCESSED_FOLDER = "./processed/"
+PROCESSED_FOLDER = "./durek/"
 TARGETS = []
 
 # Collecting target strings in one loop
@@ -28,6 +29,8 @@ os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 def parse_PDF(file_path, targets, matches):
     """Function to parse a single PDF and search for target strings."""
     match_count = 0
+
+    time_start = time.time()
     try:
         # print(f"Processing file: {file_path}", flush=True)
         reader = pypdf.PdfReader(file_path)
@@ -36,12 +39,12 @@ def parse_PDF(file_path, targets, matches):
         for page_number, page in enumerate(reader.pages, start=1):
             text = page.extract_text()
 
-            # if not text:
-            #     print(
-            #         f"Warning: No text found on page {page_number} of {file_path}",
-            #         flush=True,
-            #     )
-            #     continue  # Skip empty pages
+            if not text:
+                print(
+                    f"Warning: No text found on page {page_number} of {file_path}",
+                    flush=True,
+                )
+                continue  # Skip empty pages
 
             # Convert to lowercase for consistent matching
             text = text.lower()
@@ -50,15 +53,20 @@ def parse_PDF(file_path, targets, matches):
                 if target in text:
                     if file_path not in matches:  # Avoid duplicate entries
                         matches.append(file_path)
-                        # print(f"Match found for '{target}' in {file_path}", flush=True)
+                        print(f"Match found for '{target}' in {file_path}", flush=True)
+
                         # Copy matching PDF to the processed folder
                         shutil.copy2(file_path, PROCESSED_FOLDER)
                     match_count += 1
 
     except Exception as e:
         print(f"Error processing {file_path}: {e}", flush=True)
+    time_end = time.time()
+    print(
+        f"Time taken for {file_path}: {time_end - time_start:.2f} seconds", flush=True
+    )
 
-    print(f"Matches in {file_path}: {match_count}", flush=True)
+    # print(f"Matches in {file_path}: {match_count}", flush=True)
 
 
 def worker_task(file_path, targets, matches):
