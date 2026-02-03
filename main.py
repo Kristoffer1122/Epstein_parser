@@ -20,9 +20,9 @@ while True:
 
 # Choose where to save output files
 while True:
-    folder_target = input("Enter Folder to save data in: ").strip()
-    PROCESSED_FOLDER = f"./{folder_target}/"
-    if input("Change folder? (y/n): ").strip().lower() != "y":
+    if input("Select folder for output: ").strip().lower() != "y":
+        folder_target = input("Enter Folder to save data in: ").strip()
+        PROCESSED_FOLDER = f"./{folder_target}/"
         break
 
 # Print targets for confirmation
