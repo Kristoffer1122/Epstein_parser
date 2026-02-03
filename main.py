@@ -8,7 +8,7 @@ import pypdf
 
 # Gathering PDF folder paths and defining constants
 FOLDER_PATH = glob.glob("./VOL00010/IMAGES/*/")  # Update your folder path here
-PROCESSED_FOLDER = "./durek/"
+PROCESSED_FOLDER = ""
 TARGETS = []
 
 # Collecting target strings in one loop
@@ -16,6 +16,13 @@ while True:
     target_input = input("Enter target string to search for in PDFs: ").strip().lower()
     TARGETS.append(target_input)
     if input("Add more targets? (y/n): ").strip().lower() != "y":
+        break
+
+# Choose where to save output files
+while True:
+    folder_target = input("Enter Folder to save data in: ").strip()
+    PROCESSED_FOLDER = f"./{folder_target}/"
+    if input("Change folder? (y/n): ").strip().lower() != "y":
         break
 
 # Print targets for confirmation
