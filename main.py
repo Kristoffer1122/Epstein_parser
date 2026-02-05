@@ -1,13 +1,13 @@
 import glob
 import os
 import shutil
-import time
-from multiprocessing import Manager, Pool
+from functools import partial
+from multiprocessing import Pool
 
 import pypdf
 
 # Gathering PDF folder paths and defining constants
-FOLDER_PATH = glob.glob("./VOL00010/IMAGES/*/")  # Update your folder path here
+FOLDER_PATH = glob.glob("./datasets/dataset9/")  # Update your folder path here
 PROCESSED_FOLDER = ""
 TARGETS = []
 
@@ -32,11 +32,11 @@ for target in TARGETS:
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 
-def parse_PDF(file_path, targets, matches):
+def parse_PDF(file_path, targets):
     """Function to parse a single PDF and search for target strings."""
     match_count = 0
+    matches = []
 
-    time_start = time.time()
     try:
         # print(f"Processing file: {file_path}", flush=True)
         reader = pypdf.PdfReader(file_path)
@@ -59,6 +59,7 @@ def parse_PDF(file_path, targets, matches):
                 if target in text:
                     if file_path not in matches:  # Avoid duplicate entries
                         matches.append(file_path)
+
                         print(f"Match found for '{target}' in {file_path}", flush=True)
 
                         # Copy matching PDF to the processed folder
@@ -67,35 +68,32 @@ def parse_PDF(file_path, targets, matches):
 
     except Exception as e:
         print(f"Error processing {file_path}: {e}", flush=True)
-    time_end = time.time()
-    print(
-        f"Time taken for {file_path}: {time_end - time_start:.2f} seconds", flush=True
-    )
-
-    # print(f"Matches in {file_path}: {match_count}", flush=True)
 
 
-def worker_task(file_path, targets, matches):
+# print(f"Matches in {file_path}: {match_count}", flush=True)
+
+
+def worker_task(file_path, targets):
     """Worker task to process a single PDF file."""
-    parse_PDF(file_path, targets, matches)
+    parse_PDF(file_path, targets)
 
 
 if __name__ == "__main__":
-    with Manager() as manager:
-        matches = manager.list()  # Shared list to store match results
+    # Gather all PDF files across folders
+    pdf_files = []
+    for folder in FOLDER_PATH:
+        pdf_files.extend(glob.glob(os.path.join(folder, "*.pdf")))
 
-        # Gather all files across folders
-        pdf_files = []
-        for folder in FOLDER_PATH:
-            pdf_files.extend(glob.glob(os.path.join(folder, "*.pdf")))
+    print(f"Found {len(pdf_files)} PDF files.", flush=True)
 
-        print(f"Found {len(pdf_files)} PDF files.", flush=True)
+    targets = TARGETS  # Define your targets here
 
-        # Create a worker pool with multiple processes
-        with Pool(processes=os.cpu_count()) as pool:
-            pool.starmap(
-                worker_task, [(pdf_file, TARGETS, matches) for pdf_file in pdf_files]
-            )
+    # Create a worker pool, distribute work in chunks
+    with Pool(processes=os.cpu_count()) as pool:
+        all_matches = pool.map(partial(worker_task, targets=targets), pdf_files)
 
-        print("Processing complete. Total matches:", len(matches))
-        print("Matched files:", list(matches))
+    # Merge all matches from the individual results into one list
+    total_matches = sum((result for result in all_matches if result), [])  # Flatten
+
+    print("Processing complete. Total matches:", len(total_matches))
+    print("Matched files:", total_matches)
